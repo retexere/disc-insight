@@ -1,11 +1,12 @@
 import sys
 from PySide6.QtWidgets import QMainWindow, QApplication, QStackedWidget
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 
 from app.core.database_manager import DatabaseManager
 from app.ui.case_list_widget import CaseListWidget
-# ¡Importamos el nuevo widget de detalle!
 from app.ui.case_detail_widget import CaseDetailWidget
+from app.ui.settings_dialog import SettingsDialog # Importar el nuevo diálogo
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -16,6 +17,7 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("DISC Insight (PoC)")
         self.setGeometry(100, 100, 900, 700)
+        self.create_menu()
 
         # --- GESTIÓN DE VISTAS CON QStackedWidget ---
         self.stacked_widget = QStackedWidget()
@@ -23,7 +25,7 @@ class MainWindow(QMainWindow):
 
         # Crear instancias de nuestras dos vistas principales
         self.case_list_widget = CaseListWidget(self.db_manager)
-        self.case_detail_widget = CaseDetailWidget(self.db_manager)
+        self.case_detail_widget = CaseDetailWidget(self.db_manager, self)
 
         # Añadir las vistas al stacked widget
         self.stacked_widget.addWidget(self.case_list_widget)
@@ -40,6 +42,32 @@ class MainWindow(QMainWindow):
         
         # Iniciar mostrando la lista de casos
         self.show_case_list()
+
+    def create_menu(self):
+        """Crea la barra de menú principal de la aplicación."""
+        menu_bar = self.menuBar()
+        
+        # Menú Archivo
+        file_menu = menu_bar.addMenu("&Archivo")
+        
+        settings_action = QAction("Configuración...", self)
+        settings_action.triggered.connect(self.open_settings_dialog)
+        file_menu.addAction(settings_action)
+        
+        file_menu.addSeparator()
+        
+        exit_action = QAction("Salir", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+    def open_settings_dialog(self):
+        """Abre el diálogo de configuración."""
+        dialog = SettingsDialog(self.db_manager, self)
+        dialog.exec()
+        # Después de cerrar el diálogo, es buena idea re-configurar el cliente Gemini
+        # por si el usuario cambió la API Key.
+        from app.core.gemini_client import GeminiClient
+        GeminiClient.get_instance().configure_client()
 
     def show_case_list(self):
         """Activa y muestra la vista de la lista de casos."""

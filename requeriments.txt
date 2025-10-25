@@ -3,3 +3,5 @@ PySide6
 
 # SDK oficial de Google para interactuar con la API de Gemini
 google-generativeai
+
+Pillow

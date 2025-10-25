@@ -169,6 +169,74 @@ class DatabaseManager:
             print(f"Error fetching inputs for case {case_id}: {e}")
             return []
 
+    def get_setting(self, key: str) -> Optional[str]:
+        """
+        Retrieves a specific setting value by its key.
+        """
+        sql = "SELECT value FROM settings WHERE key = ?"
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (key,))
+            row = cursor.fetchone()
+            return row['value'] if row else None
+        except sqlite3.Error as e:
+            print(f"Error getting setting {key}: {e}")
+            return None
+
+    def update_setting(self, key: str, value: str) -> bool:
+        """
+        Updates or inserts a setting value.
+        """
+        sql = "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (key, value))
+                return True
+        except sqlite3.Error as e:
+            print(f"Error updating setting {key}: {e}")
+            return False
+
+    def update_input_with_gemini_response(self, input_id: int, response: str) -> bool:
+        """Updates an input record with the raw JSON response from Gemini."""
+        sql = "UPDATE inputs SET gemini_raw_response = ? WHERE id = ?"
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (response, input_id))
+                return True
+        except sqlite3.Error as e:
+            print(f"Error updating input {input_id} with Gemini response: {e}")
+            return False
+
+    def get_latest_evaluation_version(self, case_id: int) -> int:
+        """Gets the highest version number for a case's evaluations."""
+        sql = "SELECT MAX(version_number) FROM disc_evaluations WHERE case_id = ?"
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (case_id,))
+            result = cursor.fetchone()[0]
+            return result if result is not None else 0
+        except sqlite3.Error as e:
+            print(f"Error getting latest version for case {case_id}: {e}")
+            return 0
+
+    def create_disc_evaluation(self, case_id: int, version: int, d: float, i: float, s: float, c: float, confidence: float, justification: str) -> Optional[int]:
+        """Creates a new consolidated DISC evaluation record."""
+        sql = """
+        INSERT INTO disc_evaluations 
+        (case_id, version_number, disc_d, disc_i, disc_s, disc_c, confidence, justification_text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (case_id, version, d, i, s, c, confidence, justification))
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"Error creating DISC evaluation for case {case_id}: {e}")
+            return None
+
 
 # --- Bloque de prueba para verificar la funcionalidad del módulo ---
 if __name__ == '__main__':
