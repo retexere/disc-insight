@@ -1,0 +1,5 @@
+# Framework para la interfaz de usuario de escritorio
+PySide6
+
+# SDK oficial de Google para interactuar con la API de Gemini
+google-generativeai
