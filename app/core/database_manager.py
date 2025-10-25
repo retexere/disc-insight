@@ -183,6 +183,25 @@ class DatabaseManager:
             print(f"Error getting setting {key}: {e}")
             return None
 
+    def get_latest_evaluation_for_case(self, case_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves the most recent DISC evaluation for a given case.
+        """
+        sql = """
+        SELECT * FROM disc_evaluations 
+        WHERE case_id = ? 
+        ORDER BY version_number DESC 
+        LIMIT 1
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (case_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        except sqlite3.Error as e:
+            print(f"Error fetching latest evaluation for case {case_id}: {e}")
+            return None
+
     def update_setting(self, key: str, value: str) -> bool:
         """
         Updates or inserts a setting value.
