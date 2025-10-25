@@ -218,3 +218,6 @@ __marimo__/
 # Pipenv
 Pipfile
 Pipfile.lock
+
+# Database
+disc_insight.db
