@@ -137,6 +137,38 @@ class DatabaseManager:
             print(f"Error deleting case {case_id}: {e}")
             return False
 
+    def create_input(self, case_id: int, input_type: str, content: str) -> Optional[int]:
+        """
+        Creates a new input record associated with a case.
+        Returns the ID of the new input, or None on failure.
+        """
+        sql = """
+        INSERT INTO inputs (case_id, input_type, content)
+        VALUES (?, ?, ?)
+        """
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (case_id, input_type, content))
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"Error creating input for case {case_id}: {e}")
+            return None
+
+    def get_inputs_for_case(self, case_id: int) -> List[Dict[str, Any]]:
+        """
+        Retrieves all inputs for a specific case, ordered by creation date.
+        """
+        sql = "SELECT * FROM inputs WHERE case_id = ? ORDER BY created_at DESC"
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (case_id,))
+            inputs = [dict(row) for row in cursor.fetchall()]
+            return inputs
+        except sqlite3.Error as e:
+            print(f"Error fetching inputs for case {case_id}: {e}")
+            return []
+
 
 # --- Bloque de prueba para verificar la funcionalidad del módulo ---
 if __name__ == '__main__':
