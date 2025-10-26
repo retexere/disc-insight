@@ -57,6 +57,30 @@ class GeminiClient:
         }}
         """
 
+    def suggest_strategy_improvement(self, context: str):
+        if not self.is_configured:
+            return None, "Gemini client is not configured."
+
+        prompt = f"""
+        Actúa como un experto coach de comunicación especializado en el modelo DISC.
+        A continuación, te proporciono el contexto de una persona y una estrategia que se está aplicando.
+
+        CONTEXTO:
+        ---
+        {context}
+        ---
+
+        TAREA:
+        Basado en el perfil DISC, el objetivo de la estrategia y los resultados recientes, proporciona una
+        sugerencia concisa y accionable para mejorar la estrategia. Enfócate en el "siguiente paso".
+        No repitas la información que te he dado. Ve directamente a la recomendación.
+        """
+        try:
+            response = self.text_model.generate_content(prompt)
+            return response.text, None
+        except Exception as e:
+            return None, f"Error calling Gemini API for suggestion: {e}"
+
     def analyze_text_or_html(self, text: str):
         if not self.is_configured:
             return None, "Gemini client is not configured."

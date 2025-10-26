@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QLabel, QPushButton, QTextBrowser, 
     QGroupBox, QHBoxLayout, QTabWidget, QTextEdit, QFileDialog, QListWidget,
-    QMessageBox, QGridLayout
+    QMessageBox, QGridLayout, QDialog, QListWidgetItem
 )
 from PySide6.QtCore import Signal, Qt, QObject, QThread
 from PySide6.QtGui import QFont
@@ -10,6 +10,7 @@ from PySide6.QtGui import QFont
 from app.core.gemini_client import GeminiClient
 from app.core.disc_analyzer import recalculate_disc_profile
 from app.ui.disc_chart_widget import DiscChartWidget
+from app.ui.strategy_editor_dialog import StrategyEditorDialog
 
 # --- Worker para análisis en segundo plano ---
 class AnalysisWorker(QObject):
@@ -160,6 +161,27 @@ class CaseDetailWidget(QWidget):
         main_layout.addWidget(strategies_placeholder)
         main_layout.addStretch()
 
+        # --- SECCIÓN DE ESTRATEGIAS (REEMPLAZO DEL PLACEHOLDER) ---
+        strategies_group = QGroupBox("Estrategias")
+        strategies_layout = QVBoxLayout(strategies_group)
+        self.strategies_list = QListWidget()
+        self.strategies_list.itemDoubleClicked.connect(self.open_strategy_dialog)
+        
+        new_strategy_button = QPushButton("Nueva Estrategia")
+        new_strategy_button.clicked.connect(self.open_strategy_dialog)
+
+        strategies_layout.addWidget(self.strategies_list)
+        strategies_layout.addWidget(new_strategy_button, alignment=Qt.AlignmentFlag.AlignRight)
+        # -----------------------------------------------------------
+
+        # Añadir todos los grupos al layout principal
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(details_group)
+        main_layout.addWidget(disc_group)
+        main_layout.addWidget(inputs_group)
+        main_layout.addWidget(strategies_group) # <-- Añadido
+        main_layout.addStretch()
+
     def create_value_label(self):
         label = QLabel("N/A")
         font = QFont()
@@ -246,6 +268,25 @@ class CaseDetailWidget(QWidget):
         if self.analysis_thread and self.analysis_thread.isRunning():
             self.analysis_thread.quit()
             self.analysis_thread.wait()
+
+    def refresh_strategies_list(self):
+        self.strategies_list.clear()
+        if self.current_case_id is None: return
+        
+        strategies = self.db_manager.get_strategies_for_case(self.current_case_id)
+        for strategy in strategies:
+            # Almacenamos el ID en el item para recuperarlo fácilmente
+            item = QListWidgetItem(f"[{strategy['status'].upper()}] {strategy['title']}")
+            item.setData(Qt.ItemDataRole.UserRole, strategy['id']) 
+            self.strategies_list.addItem(item)
+    
+    def open_strategy_dialog(self, item=None):
+        strategy_id = item.data(Qt.ItemDataRole.UserRole) if isinstance(item, QListWidgetItem) else None
+        case_data = self.db_manager.get_case_by_id(self.current_case_id)
+
+        dialog = StrategyEditorDialog(self.db_manager, case_data, strategy_id, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.refresh_strategies_list()
             
     def set_ui_enabled(self, enabled: bool):
         self.save_text_button.setEnabled(enabled)

@@ -256,6 +256,61 @@ class DatabaseManager:
             print(f"Error creating DISC evaluation for case {case_id}: {e}")
             return None
 
+    def create_strategy(self, case_id: int, title: str, objective: str, description: str, status: str) -> Optional[int]:
+        sql = "INSERT INTO strategies (case_id, title, objective, description, status) VALUES (?, ?, ?, ?, ?)"
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (case_id, title, objective, description, status))
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"Error creating strategy: {e}")
+            return None
+
+    def get_strategies_for_case(self, case_id: int) -> List[Dict[str, Any]]:
+        sql = "SELECT * FROM strategies WHERE case_id = ? ORDER BY created_at DESC"
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (case_id,))
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            print(f"Error getting strategies for case {case_id}: {e}")
+            return []
+
+    def update_strategy(self, strategy_id: int, title: str, objective: str, description: str, status: str) -> bool:
+        sql = "UPDATE strategies SET title = ?, objective = ?, description = ?, status = ? WHERE id = ?"
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (title, objective, description, status, strategy_id))
+                return True
+        except sqlite3.Error as e:
+            print(f"Error updating strategy {strategy_id}: {e}")
+            return False
+
+    # --- CRUD for 'strategy_events' ---
+
+    def create_strategy_event(self, strategy_id: int, event_type: str, content: str) -> Optional[int]:
+        sql = "INSERT INTO strategy_events (strategy_id, event_type, content) VALUES (?, ?, ?)"
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql, (strategy_id, event_type, content))
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"Error creating strategy event: {e}")
+            return None
+
+    def get_events_for_strategy(self, strategy_id: int) -> List[Dict[str, Any]]:
+        sql = "SELECT * FROM strategy_events WHERE strategy_id = ? ORDER BY created_at ASC"
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (strategy_id,))
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            print(f"Error getting events for strategy {strategy_id}: {e}")
+            return []
+
 
 # --- Bloque de prueba para verificar la funcionalidad del módulo ---
 if __name__ == '__main__':
