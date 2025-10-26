@@ -311,6 +311,43 @@ class DatabaseManager:
             print(f"Error getting events for strategy {strategy_id}: {e}")
             return []
 
+    def get_full_case_export_data(self, case_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Gathers all data related to a single case for exporting.
+        This includes case details, all inputs, all evaluations, and all strategies with their events.
+        Ensures all data is converted to JSON-serializable types (dicts).
+        """
+        case_data = self.get_case_by_id(case_id)
+        if not case_data:
+            return None
+        
+        # 'case_data' ya es un diccionario gracias a get_case_by_id
+        export_data = dict(case_data)
+        
+        # 'get_inputs_for_case' ya devuelve una lista de diccionarios
+        export_data['inputs'] = self.get_inputs_for_case(case_id)
+        
+        # --- CORRECCIÓN 1: Convertir explícitamente las evaluaciones ---
+        evaluations_cursor = self.conn.execute(
+            "SELECT * FROM disc_evaluations WHERE case_id = ? ORDER BY version_number ASC", (case_id,)
+        )
+        export_data['disc_evaluations'] = [dict(row) for row in evaluations_cursor.fetchall()]
+        # -----------------------------------------------------------------
+        
+        strategies = self.get_strategies_for_case(case_id) # Ya devuelve lista de dicts
+        
+        # --- CORRECCIÓN 2 (Mejora de robustez): Asegurar que todo es un dict ---
+        processed_strategies = []
+        for strategy in strategies:
+            strategy_dict = dict(strategy) # Aseguramos que es un dict
+            # 'get_events_for_strategy' ya devuelve una lista de diccionarios
+            strategy_dict['events'] = self.get_events_for_strategy(strategy['id'])
+            processed_strategies.append(strategy_dict)
+        # -----------------------------------------------------------------------
+            
+        export_data['strategies'] = processed_strategies
+        
+        return export_data
 
 # --- Bloque de prueba para verificar la funcionalidad del módulo ---
 if __name__ == '__main__':

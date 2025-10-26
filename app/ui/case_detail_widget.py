@@ -11,6 +11,7 @@ from app.core.gemini_client import GeminiClient
 from app.core.disc_analyzer import recalculate_disc_profile
 from app.ui.disc_chart_widget import DiscChartWidget
 from app.ui.strategy_editor_dialog import StrategyEditorDialog
+import json
 
 # --- Worker para análisis en segundo plano ---
 class AnalysisWorker(QObject):
@@ -63,6 +64,10 @@ class CaseDetailWidget(QWidget):
         back_button.clicked.connect(self.back_to_list_requested.emit)
         top_layout.addWidget(back_button)
         top_layout.addStretch()
+        
+        self.export_button = QPushButton("Exportar a JSON")
+        self.export_button.clicked.connect(self.export_case_data)
+        top_layout.addWidget(self.export_button)
 
         # --- Sección de Datos Básicos ---
         details_group = QGroupBox("Detalles del Caso")
@@ -189,6 +194,50 @@ class CaseDetailWidget(QWidget):
         font.setBold(True)
         label.setFont(font)
         return label
+
+    def export_case_data(self):
+        """
+        Recopila todos los datos del caso actual y los guarda en un archivo JSON.
+        """
+        if self.current_case_id is None:
+            return
+
+        # Obtener el nombre del caso para el nombre de archivo sugerido
+        case_data = self.db_manager.get_case_by_id(self.current_case_id)
+        if not case_data:
+            QMessageBox.critical(self, "Error", "No se pudo encontrar el caso para exportar.")
+            return
+            
+        suggested_filename = f"disc_insight_export_{case_data['name'].replace(' ', '_')}_{self.current_case_id}.json"
+
+        # Abrir el diálogo de "Guardar como..."
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar Exportación de Caso",
+            suggested_filename,
+            "JSON Files (*.json);;All Files (*)"
+        )
+
+        if not file_path:
+            # El usuario canceló el diálogo
+            return
+            
+        # Recopilar todos los datos
+        full_data = self.db_manager.get_full_case_export_data(self.current_case_id)
+        
+        if not full_data:
+            QMessageBox.critical(self, "Error", "No se pudieron recopilar los datos para la exportación.")
+            return
+            
+        # Escribir los datos en el archivo
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                # json.dump escribe el diccionario en el archivo con un formato legible
+                json.dump(full_data, f, ensure_ascii=False, indent=4)
+            
+            QMessageBox.information(self, "Éxito", f"Los datos del caso se han exportado correctamente a:\n{file_path}")
+        except IOError as e:
+            QMessageBox.critical(self, "Error de Escritura", f"No se pudo guardar el archivo:\n{e}")
 
     def load_case_data(self, case_id: int):
         self.current_case_id = case_id
