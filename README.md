@@ -49,7 +49,7 @@ Sigue estos pasos para poner en marcha la aplicación en tu máquina local.
 ### 2. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/disc-insight.git
+git clone https://github.com/retexere/disc-insight.git
 cd disc-insight
 ```
 
